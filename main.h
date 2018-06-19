@@ -55,4 +55,17 @@ void* threadElevator(void *arg);
 void* threadVisitor(void *arg);
 void* threadTerminal(void *arg);
 
+#define TIME_BETWEEN_FLOORS 1
+
+/** Le fichier tools sert à rassembler toutes les  qui
+  * encombreraient le main autrement.
+  */
+
+/* fonctions utiles */
+/* Fonctions pour ascenseurs */
+
+//cette fonction permet de descendre ou monter l'ascenseur d'un étage (vers le haut ou le bas)
+//elle simule également le temps de mouvement
+void changeFloor(elevator* elevator, int i);
+
 #endif

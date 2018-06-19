@@ -29,7 +29,7 @@ void * threadElevator(void *arg) {
         //TODO attendre que qqn rentre dedans pour etre reveillé
       } else {
         if(elevator->goesUp){
-          //changeFloor(elevator,1); //l'ascenseur monte
+          changeFloor(elevator,1); //l'ascenseur monte
           /*TODO
           if(checkIfStop()){ //on vérifie si on doit s'arrêter au nouvel étage
               for(listePersonnes){
@@ -41,7 +41,7 @@ void * threadElevator(void *arg) {
           }
         } */
         } else {
-          //changeFloor(elevator, -1); //l'ascenseur monte
+          changeFloor(elevator, -1); //l'ascenseur monte
           /*TODO
           if(checkIfStop()){ //on vérifie si on doit s'arrêter au nouvel étage
               for(listePersonnes){
@@ -92,4 +92,9 @@ void * threadTerminal(void *arg){
     printf("je suis la borneuh \n");
     sleep(3);
   }
+}
+
+void changeFloor(elevator* elevator, int i){
+  elevator->currentFloor +=i;
+  sleep(TIME_BETWEEN_FLOORS);
 }
