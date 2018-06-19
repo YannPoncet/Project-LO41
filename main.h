@@ -10,8 +10,7 @@
 #include <semaphore.h>
 #include <signal.h>
 #include <stdbool.h>
-
-#include "tools.h"
+#include <time.h>
 
 //Nombre d'ascenseurs
 #define NB_ELEVATOR 3
@@ -20,9 +19,13 @@
 //Nombre d'étages
 #define NB_FLOOR 25
 //Nombre max de résident
-#define NB_MAX_RESIDENTS 100
-//Nombre max de visiteurs (=visiteurs + livreurs)
-#define NB_MAX_VISITORS 100
+#define NB_MAX_PERSONS 100
+//le temps pour passer d'un étage à un autre
+#define TIME_BETWEEN_FLOORS 1
+
+
+//Nombre de personnes initiales utilisées pour simuler
+#define NB_PERSONS_BASE 10
 
 
 typedef struct{
@@ -46,16 +49,15 @@ typedef struct{
   int currentFloor; //etage actuel du visiteur
   int elevatorLink; //sert à lier un ascenseur avec une personne
   bool isInAnElevator;
-} visitor;
+} person;
 
-
+person personList[NB_MAX_PERSONS];
 
 //Threads
 void* threadElevator(void *arg);
-void* threadVisitor(void *arg);
+void* threadPerson(void *arg);
 void* threadTerminal(void *arg);
-
-#define TIME_BETWEEN_FLOORS 1
+void* threadDieu(void *arg);
 
 /** Le fichier tools sert à rassembler toutes les  qui
   * encombreraient le main autrement.
@@ -64,8 +66,27 @@ void* threadTerminal(void *arg);
 /* fonctions utiles */
 /* Fonctions pour ascenseurs */
 
-//cette fonction permet de descendre ou monter l'ascenseur d'un étage (vers le haut ou le bas)
-//elle simule également le temps de mouvement
+/*cette fonction permet de descendre ou monter l'ascenseur d'un étage (vers le haut ou le bas)
+*elle simule également le temps de mouvement
+*/
 void changeFloor(elevator* elevator, int i);
+
+//actualise l'étage de destination en fonction du sens de l'ascenseur
+int updateDestinationFloor(int destinationList[], bool goesUp, bool goesDown, int nbPersons);
+
+//vérifie si on doit s'arrêter à l'étage actuel
+bool checkIfStop(int destinationList[], int currentFloor);
+
+//enleve la case vide du tableau
+void deleteEmptyBox(int destinationList[]);
+
+//cette fonction permet d'inserer un element la liste en remettant tous les éléments dans l'ordre
+void insertFloor(int destinationList[], int toInsert, int nbPersons);
+
+/*cette fonction permet de trier la liste en remettant tous les éléments dans l'ordre
+* si on monte et qu'un étage de la liste de destination est inferieur à l'étage actuel
+* on le met en dernier dans la liste, de même si on descend et qu'un étage est supérieur à l'étage actuel
+*/
+void updateList(int destinationList[], int currentFloor, bool goesUp);
 
 #endif
