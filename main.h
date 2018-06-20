@@ -95,8 +95,11 @@ int updateDestinationFloor(int destinationList[], int currentFloor, bool goesUp,
 //vérifie si on doit s'arrêter à l'étage actuel
 bool checkIfStop(int destinationList[], int currentFloor);
 
+//enlève la case vide en 1ere position
+void deleteEmptyBoxWaitingList(int waitingList[]);
+
 //enleve la case vide du tableau
-void deleteEmptyBox(int destinationList[]);
+void deleteEmptyBoxElevator(int destinationList[]);
 
 //cette fonction permet d'inserer un element la liste en remettant tous les éléments dans l'ordre
 void insertFloor(int destinationList[], int toInsert);

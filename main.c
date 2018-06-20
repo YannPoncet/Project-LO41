@@ -191,7 +191,7 @@ void* threadTerminal(void *arg) {
         Elevator* elev = &elevatorList[i];
         if(elev->previsonalNbPersons<MAX_CAPACITY) {
 
-          if(elev->goesUp || elev->goesDown){
+          if(elev->goesUp || elev->goesDown){ //si l'ascenseur se déplace vers le haut ou vers le bas
             insertFloor(elev->destinationList, pers->currentFloor);
             elev->destinationFloor=updateDestinationFloor(elev->destinationList, elev->currentFloor, elev->goesUp, elev->goesDown);
             pers->elevatorLink = elev->id;
@@ -209,6 +209,8 @@ void* threadTerminal(void *arg) {
           }
           printf("threadTerminal => La personne %d allant à l'étage %d via ascenseur %d va être réveillée\n", pers->id, pers->wantedFloor, pers->elevatorLink);
           //on reveille la personne qui attend que le terminal lui associe un ascenseur
+          waitingList[0] = -1;
+          deleteEmptyBoxWaitingList(waitingList);
           pthread_cond_signal(&cond_person_request_terminal[pers->id]);
 
 
@@ -336,7 +338,7 @@ void deleteDestination(int destinationList[], int currentFloor){
       destinationList[i] = -1;
     }
   }
-  deleteEmptyBox(destinationList);
+  deleteEmptyBoxElevator(destinationList);
 }
 
 
@@ -384,7 +386,15 @@ bool checkIfStop(int destinationList[], int currentFloor){
   return false;
 }
 
-void deleteEmptyBox(int destinationList[]){
+void deleteEmptyBoxWaitingList(int waitingList[]){
+  int i=0;
+  while(i<NB_MAX_PERSONS && waitingList[i]>-1){
+    waitingList[i] = waitingList[i+1];
+    i++;
+  }
+}
+
+void deleteEmptyBoxElevator(int destinationList[]){
   //enlever la case vide (tout mettre à gauche)
   bool isFinished = false;
   int i=0;
