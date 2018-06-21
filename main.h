@@ -15,11 +15,11 @@
 //Nombre d'ascenseurs
 #define NB_ELEVATOR 1
 //Nombre de personnes max dans l'ascenseurs
-#define MAX_CAPACITY 10
+#define MAX_CAPACITY 2
 //Nombre d'étages
 #define NB_FLOOR 10
 //Nombre max de résident
-#define NB_MAX_PERSONS 1
+#define NB_MAX_PERSONS 4
 //le temps pour passer d'un étage à un autre
 #define TIME_BETWEEN_FLOORS 1
 
@@ -62,6 +62,8 @@ int waitingList[NB_MAX_PERSONS];
 
 Person personList[NB_MAX_PERSONS];
 
+
+
 //Threads
 void* threadElevator(void *arg);
 void* threadPerson(void *arg);
@@ -70,13 +72,15 @@ void* threadGod(void *arg);
 
 //Conditions
 pthread_cond_t cond_elevator_request_terminal[NB_ELEVATOR]; //l'ascenseur attend jusqu'à ce qu'il soit reveillé par le terminal
-pthread_cond_t cond_elevator_request_person[NB_ELEVATOR];
+pthread_cond_t cond_elevator_request_person[NB_ELEVATOR][NB_MAX_PERSONS];
 pthread_cond_t cond_person_request_terminal[NB_MAX_PERSONS];
-pthread_cond_t cond_person_request_elevator[NB_MAX_PERSONS];
+pthread_cond_t cond_person_request_elevator_in[NB_MAX_PERSONS];
+pthread_cond_t cond_person_request_elevator_out[NB_MAX_PERSONS];
 
 //Mutex
 pthread_mutex_t m_elevator[NB_ELEVATOR];
 pthread_mutex_t m_person[NB_MAX_PERSONS];
+
 
 /** Le fichier tools sert à rassembler toutes les  qui
   * encombreraient le main autrement.
@@ -91,6 +95,7 @@ Person* findPerson(int id);
 /* Fonctions pour ascenseurs */
 
 void printWaitingList();
+void printDList(int destinationList[]);
 
 /*cette fonction permet de descendre ou monter l'ascenseur d'un étage (vers le haut ou le bas)
 *elle simule également le temps de mouvement
