@@ -17,12 +17,19 @@
 //Nombre de personnes max dans l'ascenseurs
 #define MAX_CAPACITY 10
 //Nombre d'étages
-#define NB_FLOOR 25
+#define NB_FLOOR 10
 //Nombre max de résident
 #define NB_MAX_PERSONS 1
 //le temps pour passer d'un étage à un autre
 #define TIME_BETWEEN_FLOORS 1
 
+#define ANSI_COLOR_RED     "\x1b[91m"
+#define ANSI_COLOR_GREEN   "\x1b[32m"
+#define ANSI_COLOR_YELLOW  "\x1b[33m"
+#define ANSI_COLOR_BLUE    "\x1b[34m"
+#define ANSI_COLOR_MAGENTA "\x1b[35m"
+#define ANSI_COLOR_CYAN    "\x1b[36m"
+#define ANSI_COLOR_RESET   "\x1b[0m"
 
 typedef struct{
 	int id; //numero de l'ascenseur
@@ -59,10 +66,11 @@ Person personList[NB_MAX_PERSONS];
 void* threadElevator(void *arg);
 void* threadPerson(void *arg);
 void* threadTerminal(void *arg);
-void* threadDieu(void *arg);
+void* threadGod(void *arg);
 
 //Conditions
 pthread_cond_t cond_elevator_request_terminal[NB_ELEVATOR]; //l'ascenseur attend jusqu'à ce qu'il soit reveillé par le terminal
+pthread_cond_t cond_elevator_request_person[NB_ELEVATOR];
 pthread_cond_t cond_person_request_terminal[NB_MAX_PERSONS];
 pthread_cond_t cond_person_request_elevator[NB_MAX_PERSONS];
 
@@ -81,6 +89,8 @@ void addPersonToWaitingList(int id);
 Person* findPerson(int id);
 
 /* Fonctions pour ascenseurs */
+
+void printWaitingList();
 
 /*cette fonction permet de descendre ou monter l'ascenseur d'un étage (vers le haut ou le bas)
 *elle simule également le temps de mouvement
