@@ -13,13 +13,13 @@
 #include <time.h>
 
 //Nombre d'ascenseurs
-#define NB_ELEVATOR 1
+#define NB_ELEVATOR 3
 //Nombre de personnes max dans l'ascenseurs
 #define MAX_CAPACITY 2
 //Nombre d'étages
 #define NB_FLOOR 10
 //Nombre max de résident
-#define NB_MAX_PERSONS 4
+#define NB_MAX_PERSONS 7
 //le temps pour passer d'un étage à un autre
 #define TIME_BETWEEN_FLOORS 1
 
@@ -80,6 +80,7 @@ pthread_cond_t cond_person_request_elevator_out[NB_MAX_PERSONS];
 //Mutex
 pthread_mutex_t m_elevator[NB_ELEVATOR];
 pthread_mutex_t m_person[NB_MAX_PERSONS];
+pthread_mutex_t m_waitingList;
 
 
 /** Le fichier tools sert à rassembler toutes les  qui
