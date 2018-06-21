@@ -1,6 +1,9 @@
+/* Projet réalisé par Boris Broglé et Yann Poncet dans le cadre de l'UV LO41 à l'UTBM */
+
 #ifndef MAIN_H
 #define MAIN_H
 
+/* Includes */
 #include <unistd.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -12,17 +15,15 @@
 #include <stdbool.h>
 #include <time.h>
 
-//Nombre d'ascenseurs
-#define NB_ELEVATOR 3
-//Nombre de personnes max dans l'ascenseurs
-#define MAX_CAPACITY 2
-//Nombre d'étages
-#define NB_FLOOR 10
-//Nombre max de résident
-#define NB_MAX_PERSONS 7
-//le temps pour passer d'un étage à un autre
-#define TIME_BETWEEN_FLOORS 1
+/* Paramètres globaux */
+#define NB_ELEVATOR 3 //Nombre d'ascenseurs
+#define MAX_CAPACITY 5 //Nombre de personnes max dans l'ascenseurs
+#define NB_FLOOR 10 //Nombre d'étages
+#define NB_MAX_PERSONS 2 //Nombre max de personnes (résidents + visiteurs)
+#define TIME_BETWEEN_FLOORS 1 //le temps pour passer d'un étage à un autre
 
+
+/* Définition des couleurs utilisées */
 #define ANSI_COLOR_RED     "\x1b[91m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
 #define ANSI_COLOR_YELLOW  "\x1b[33m"
@@ -31,6 +32,7 @@
 #define ANSI_COLOR_CYAN    "\x1b[36m"
 #define ANSI_COLOR_RESET   "\x1b[0m"
 
+//Structure ascenseur
 typedef struct{
 	int id; //numero de l'ascenseur
   bool goesUp;
@@ -43,7 +45,6 @@ typedef struct{
 	int previsonalNbPersons; //nombre de personnes qui seront dedans si toutes les personnes qui attendent y rentrent
 } Elevator;
 
-Elevator elevatorList[NB_ELEVATOR];
 
 //Structure personne
 typedef struct{
@@ -56,19 +57,20 @@ typedef struct{
   bool isInAnElevator;
 } Person;
 
+//Listes globales
 
-int waitingList[NB_MAX_PERSONS];
+int waitingList[NB_MAX_PERSONS]; //liste d'attente d'accès à la borne
 
+Person personList[NB_MAX_PERSONS]; //liste des personnes dans le batiment
 
-Person personList[NB_MAX_PERSONS];
-
+Elevator elevatorList[NB_ELEVATOR]; // liste des ascenseurs du batiment
 
 
 //Threads
-void* threadElevator(void *arg);
-void* threadPerson(void *arg);
-void* threadTerminal(void *arg);
-void* threadGod(void *arg);
+void* threadGod(void *arg); //crée des personnes
+void* threadPerson(void *arg); //se balade dans l'immeuble
+void* threadTerminal(void *arg); //gère le lien entre les ascenseurs et les personnes
+void* threadElevator(void *arg); //déplace les gens d'un étage à un autre
 
 //Conditions
 pthread_cond_t cond_elevator_request_terminal[NB_ELEVATOR]; //l'ascenseur attend jusqu'à ce qu'il soit reveillé par le terminal
@@ -78,52 +80,56 @@ pthread_cond_t cond_person_request_elevator_in[NB_MAX_PERSONS];
 pthread_cond_t cond_person_request_elevator_out[NB_MAX_PERSONS];
 
 //Mutex
-pthread_mutex_t m_elevator[NB_ELEVATOR];
-pthread_mutex_t m_person[NB_MAX_PERSONS];
-pthread_mutex_t m_waitingList;
+pthread_mutex_t m_elevator[NB_ELEVATOR]; //utilisé dans les cond_wait
+pthread_mutex_t m_person[NB_MAX_PERSONS]; //utilisé dans les cond_wait
+pthread_mutex_t m_waitingList; //empêcher les personnes d'accéder à la liste d'attente en même temps
 
 
-/** Le fichier tools sert à rassembler toutes les  qui
-  * encombreraient le main autrement.
-  */
 
-/* fonctions utiles */
+/* Fonctions utiles */
 
+
+/* Fonctions dans les personnes */
+
+//ajoute un personne à la liste d'attente en fonction de son ID
 void addPersonToWaitingList(int id);
 
+
+/* Fonctions dans le terminal */
+
+//enlève la case vide en 1ere position dans la liste d'attente
+void deleteEmptyBoxWaitingList(int waitingList[]);
+
+//permet de trouver une personne dans la liste de personnes grâce à son ID
 Person* findPerson(int id);
 
-/* Fonctions pour ascenseurs */
 
-void printWaitingList();
-void printDList(int destinationList[]);
+/* Fonctions dans les ascenseurs */
 
 /*cette fonction permet de descendre ou monter l'ascenseur d'un étage (vers le haut ou le bas)
-*elle simule également le temps de mouvement
-*/
+*elle simule également le temps de mouvement*/
 void changeFloor(Elevator* elevator, int i);
 
+//permet d'enlever l'étage actuel de la liste de destinations de l'ascenseur
 void deleteDestination(int destinationList[], int currentFloor);
 
-//actualise l'étage de destination en fonction du sens de l'ascenseur
+//enleve la case vide du tableau de destinations d'un ascenseur, utilisée dans deleteDestination
+void deleteEmptyBoxElevator(int destinationList[]);
+
+//actualise l'étage de destination en fonction du sens de l'ascenseur (aussi utilisée dans le terminal)
 int updateDestinationFloor(int destinationList[], int currentFloor, bool goesUp, bool goesDown);
 
 //vérifie si on doit s'arrêter à l'étage actuel
 bool checkIfStop(int destinationList[], int currentFloor);
 
-//enlève la case vide en 1ere position
-void deleteEmptyBoxWaitingList(int waitingList[]);
-
-//enleve la case vide du tableau
-void deleteEmptyBoxElevator(int destinationList[]);
-
-//cette fonction permet d'inserer un element la liste en remettant tous les éléments dans l'ordre
+/*cette fonction permet d'inserer un element la liste de destination
+d'un ascenseur en remettant tous les éléments dans l'ordre, (aussi utilisée dans le terminal)*/
 void insertFloor(int destinationList[], int toInsert);
 
-/*cette fonction permet de trier la liste en remettant tous les éléments dans l'ordre
-* si on monte et qu'un étage de la liste de destination est inferieur à l'étage actuel
-* on le met en dernier dans la liste, de même si on descend et qu'un étage est supérieur à l'étage actuel
-*/
-void updateList(int destinationList[], int currentFloor, bool goesUp);
+
+/* Fonctions d'affichage */
+
+void printWaitingList(); //affiche la liste d'attente
+void printDList(int destinationList[]); //affiche la liste des destinations d'un ascenseur
 
 #endif
