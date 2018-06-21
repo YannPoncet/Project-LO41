@@ -16,11 +16,11 @@
 #include <time.h>
 
 /* Paramètres globaux */
-#define NB_ELEVATOR 3 //Nombre d'ascenseurs
-#define MAX_CAPACITY 5 //Nombre de personnes max dans l'ascenseurs
+#define NB_ELEVATOR 2 //Nombre d'ascenseurs
+#define MAX_CAPACITY 4 //Nombre de personnes max dans l'ascenseurs
 #define NB_FLOOR 10 //Nombre d'étages
-#define NB_MAX_PERSONS 2 //Nombre max de personnes (résidents + visiteurs)
-#define TIME_BETWEEN_FLOORS 1 //le temps pour passer d'un étage à un autre
+#define NB_MAX_PERSONS 5 //Nombre max de personnes (résidents + visiteurs)
+#define TIME_BETWEEN_FLOORS 0.5 //le temps pour passer d'un étage à un autre
 
 
 /* Définition des couleurs utilisées */
@@ -102,6 +102,15 @@ void deleteEmptyBoxWaitingList(int waitingList[]);
 
 //permet de trouver une personne dans la liste de personnes grâce à son ID
 Person* findPerson(int id);
+
+//permet de trouver un ascenseur dans la liste d'ascenseurs grâce à son ID
+Elevator* findElevator(int elevId);
+
+//permet de savoir si un etage se trouve dans la liste des destinations de l'ascenseur
+bool isInDList(int destinationList[], int toTestFloor);
+
+//permet de choisir un ascenseur grâce à plusieurs conditions testées par ordre d'importance (c'est l'IA)
+int chooseElevator(Person* pers);
 
 
 /* Fonctions dans les ascenseurs */

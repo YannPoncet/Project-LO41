@@ -74,13 +74,13 @@ void* threadGod(void *arg){
   printf(ANSI_COLOR_RED "Dieu: Dieu est prêt à créer des personnes\n" ANSI_COLOR_RESET);
   while(i<NB_MAX_PERSONS){//pour que l'on ne mette pas plus de personnes que possible dans le tableau
     int r = rand()%100; //random between 0 and 99
-    if(r<100) { //dieu a une chance sur x de créer une personne
+    if(r<60) { //dieu a une chance sur x de créer une personne
       //Creation des threads person
       printf(ANSI_COLOR_RED "Dieu: Je crée la personne %d\n" ANSI_COLOR_RESET, i);
       pthread_create(&thread_person[i], NULL, threadPerson ,(void *) i );
       i++;
     }
-    //sleep(1);
+    sleep(1);
   }
   for(int i=0; i<NB_MAX_PERSONS; i++) {
     pthread_join(thread_person[i], NULL);
@@ -108,8 +108,8 @@ void* threadPerson(void *arg) {
     if(person->wantedFloor > -1) { //si la personne veut aller quelque part
       if(person->elevatorLink == -1 && !person->isInAnElevator && person->wantedFloor>-1) { //si la personne n'est pas dans un ascenseur
         //puisque la personne est réveillée, on l'ajoute a la liste d'attente et on l'endort
-        pthread_mutex_lock(&m_waitingList);
-        addPersonToWaitingList(person->id);
+        pthread_mutex_lock(&m_waitingList); //on s'assure qu'aucune autre personne ne touche à la liste d'attente en même temps
+          addPersonToWaitingList(person->id);
         pthread_mutex_unlock(&m_waitingList);
         //on attend que le terminal nous donne un ascenseur
         pthread_cond_wait(&cond_person_request_terminal[person->id], &m_person[person->id]);
@@ -150,38 +150,36 @@ void* threadTerminal(void *arg) {
   while(1){
     if(waitingList[0]>-1) { //si il y a qqn dans la liste d'attente
       Person* pers = findPerson(waitingList[0]);
-      int i=0;
-      while(i<NB_ELEVATOR && pers->elevatorLink==-1) {
-        Elevator* elev = &elevatorList[i];
+      int elevId = chooseElevator(pers);
+      if(elevId != -1) {
+        Elevator* elev = findElevator(elevId);
 
+        if(elev->goesUp || elev->goesDown){ //si l'ascenseur se déplace vers le haut ou vers le bas
+          insertFloor(elev->destinationList, pers->currentFloor);
+          elev->destinationFloor=updateDestinationFloor(elev->destinationList, elev->currentFloor, elev->goesUp, elev->goesDown);
+          pers->elevatorLink = elev->id;
+          elev->previsonalNbPersons++;
+        }
+        else { //ascenseur à l'arret
+          insertFloor(elev->destinationList, pers->currentFloor);
+          elev->destinationFloor=updateDestinationFloor(elev->destinationList, elev->currentFloor, elev->goesUp, elev->goesDown);
+          pers->elevatorLink = elev->id;
+          elev->previsonalNbPersons++;
 
-        if(elev->previsonalNbPersons<MAX_CAPACITY) {
-          if(elev->goesUp || elev->goesDown){ //si l'ascenseur se déplace vers le haut ou vers le bas
-            insertFloor(elev->destinationList, pers->currentFloor);
-            elev->destinationFloor=updateDestinationFloor(elev->destinationList, elev->currentFloor, elev->goesUp, elev->goesDown);
-            pers->elevatorLink = elev->id;
-            elev->previsonalNbPersons++;
+          if(elev->currentFloor < pers->currentFloor){
+            elev->goesUp = true;
+          } else if(elev->currentFloor > pers->currentFloor) {
+            elev->goesDown = true;
           }
-          else { //ascenseur à l'arret
-            insertFloor(elev->destinationList, pers->currentFloor);
-            elev->destinationFloor=updateDestinationFloor(elev->destinationList, elev->currentFloor, elev->goesUp, elev->goesDown);
-            pers->elevatorLink = elev->id;
-            elev->previsonalNbPersons++;
-
-            if(elev->currentFloor < pers->currentFloor){
-              elev->goesUp = true;
-            } else if(elev->currentFloor > pers->currentFloor) {
-              elev->goesDown = true;
-            }
-          }
-          printf(ANSI_COLOR_YELLOW "Borne: La personne %d va attendre l'ascenseur %d pour aller à l'étage %d\n" ANSI_COLOR_RESET, pers->id, pers->elevatorLink, pers->wantedFloor);
-          //on reveille la personne qui attend que le terminal lui associe un ascenseur
+        }
+        printf(ANSI_COLOR_YELLOW "Borne: La personne %d va attendre l'ascenseur %d pour aller à l'étage %d\n" ANSI_COLOR_RESET, pers->id, pers->elevatorLink, pers->wantedFloor);
+        //on reveille la personne qui attend que le terminal lui associe un ascenseur
+        pthread_mutex_lock(&m_waitingList); //on s'assure que les personnes ne touchent pas à la liste en même temps
           waitingList[0] = -1;
           deleteEmptyBoxWaitingList(waitingList);
-          pthread_cond_signal(&cond_person_request_terminal[pers->id]);
+        pthread_mutex_unlock(&m_waitingList);
 
-        }
-        i++;
+        pthread_cond_signal(&cond_person_request_terminal[pers->id]);
       }
     }
 
@@ -191,6 +189,63 @@ void* threadTerminal(void *arg) {
     }
     sleep(1);
   }
+}
+
+
+int chooseElevator(Person* pers) {
+  int nbConditions = 4; //nombre de conditions
+  bool choiceMade = false;
+  int choice = -1;
+  int i=0;
+  while(i<NB_ELEVATOR*nbConditions && pers->elevatorLink==-1 && !choiceMade) {
+    Elevator* elev = &elevatorList[i%NB_ELEVATOR];
+    if(elev->previsonalNbPersons<MAX_CAPACITY) {
+      int numCond = 0; //numero de la condition
+
+      //condition 0 (la position et la destination de la personne sont dans le sens de marche de l'ascenseur et sont dans la liste de destination de l'ascenseur)
+      if(((NB_ELEVATOR*(nbConditions-1))-(NB_ELEVATOR*(nbConditions-1-numCond)))<=i && i<=((NB_ELEVATOR*(nbConditions))-1-(NB_ELEVATOR*(nbConditions-1-numCond)))){
+        if((elev->goesUp && pers->currentFloor>=elev->currentFloor && pers->wantedFloor>pers->currentFloor
+            && (isInDList(elev->destinationList, pers->currentFloor) && isInDList(elev->destinationList, pers->wantedFloor)))
+          || ((elev->goesDown && pers->currentFloor<=elev->currentFloor && pers->wantedFloor<pers->currentFloor)
+            && (isInDList(elev->destinationList, pers->currentFloor) && isInDList(elev->destinationList, pers->wantedFloor)))){
+          choice = elev->id;
+          choiceMade = true;
+        }
+      }
+      numCond++; //pour que le test du prochain if soit juste
+
+      //condition1 (la position et la destination de la personne sont dans le sens de marche de l'ascenseur et l'une des deux est dans la liste de destination de l'ascenseur)
+      if(((NB_ELEVATOR*(nbConditions-1))-(NB_ELEVATOR*(nbConditions-1-numCond)))<=i && i<=((NB_ELEVATOR*(nbConditions))-1-(NB_ELEVATOR*(nbConditions-1-numCond)))){
+        if((elev->goesUp && pers->currentFloor>=elev->currentFloor && pers->wantedFloor>pers->currentFloor
+            && (isInDList(elev->destinationList, pers->currentFloor) || isInDList(elev->destinationList, pers->wantedFloor)))
+          || ((elev->goesDown && pers->currentFloor<=elev->currentFloor && pers->wantedFloor<pers->currentFloor)
+            && (isInDList(elev->destinationList, pers->currentFloor) || isInDList(elev->destinationList, pers->wantedFloor)))){
+          choice = elev->id;
+          choiceMade = true;
+        }
+      }
+      numCond++; //pour que le test du prochain if soit juste
+
+      //condition numero 2 (la position et la destination de la personne sont dans le sens de marche de l'ascenseur)
+      if(((NB_ELEVATOR*(nbConditions-1))-(NB_ELEVATOR*(nbConditions-1-numCond)))<=i && i<=((NB_ELEVATOR*(nbConditions))-1-(NB_ELEVATOR*(nbConditions-1-numCond)))){
+        if((elev->goesUp && pers->currentFloor>=elev->currentFloor && pers->wantedFloor>pers->currentFloor)
+          || (elev->goesDown && pers->currentFloor<=elev->currentFloor && pers->wantedFloor<pers->currentFloor)){
+          choice = elev->id;
+          choiceMade = true;
+        }
+      }
+      numCond++; //pour que le test du prochain if soit juste
+
+      //Condition numero 3 (derniere, on prend n'importe quel ascenseur)
+      if(((NB_ELEVATOR*(nbConditions-1))-(NB_ELEVATOR*(nbConditions-1-numCond)))<=i && i<=((NB_ELEVATOR*(nbConditions))-1-(NB_ELEVATOR*(nbConditions-1-numCond)))){
+        choice = elev->id;
+        choiceMade = true;
+      }
+      numCond++; //juste pour ne pas oublier si on rajoute un condition par la suite
+    }
+    i++;
+  }
+  return choice;
 }
 
 
@@ -408,16 +463,38 @@ Person* findPerson(int id){
 }
 
 
+Elevator* findElevator(int elevId) {
+  for(int i=0; i<NB_ELEVATOR; i++) {
+    if(elevatorList[i].id == elevId)
+      return &elevatorList[i];
+  }
+}
+
+bool isInDList(int destinationList[], int toTestFloor){
+  for(int i=0; i<NB_FLOOR; i++) {
+    if(destinationList[i] == toTestFloor) {
+      return 1;
+    }
+  }
+  return 0;
+}
+
+
 /* Fonctions utilisées pour les ascenseurs */
 
 void changeFloor(Elevator* elevator, int i){
-  elevator->currentFloor +=i;
-  if(i>0){
-    printf(ANSI_COLOR_GREEN "Ascenseur %d: je monte d'un étage, je vais à l'étage %d\n" ANSI_COLOR_RESET, elevator->id, elevator->currentFloor);
-  } else if(i<0){
-    printf(ANSI_COLOR_GREEN "Ascenseur %d: je descend d'un étage, je vais à l'étage %d\n" ANSI_COLOR_RESET, elevator->id, elevator->currentFloor);
+  if(elevator->currentFloor + i >= NB_FLOOR || elevator->currentFloor + i < 0) {
+    elevator->goesUp = false;
+    elevator->goesDown = false;
+  } else {
+    elevator->currentFloor +=i;
+    if(i>0){
+      printf(ANSI_COLOR_GREEN "Ascenseur %d: je monte d'un étage, je vais à l'étage %d\n" ANSI_COLOR_RESET, elevator->id, elevator->currentFloor);
+    } else if(i<0){
+      printf(ANSI_COLOR_GREEN "Ascenseur %d: je descend d'un étage, je vais à l'étage %d\n" ANSI_COLOR_RESET, elevator->id, elevator->currentFloor);
+    }
+    sleep(TIME_BETWEEN_FLOORS);
   }
-  sleep(TIME_BETWEEN_FLOORS);
 }
 
 
