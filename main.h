@@ -16,11 +16,11 @@
 #include <time.h>
 
 /* Paramètres globaux */
-#define NB_ELEVATOR 2 //Nombre d'ascenseurs
+#define NB_ELEVATOR 3 //Nombre d'ascenseurs
 #define MAX_CAPACITY 4 //Nombre de personnes max dans l'ascenseurs
-#define NB_FLOOR 10 //Nombre d'étages
-#define NB_MAX_PERSONS 5 //Nombre max de personnes (résidents + visiteurs)
-#define TIME_BETWEEN_FLOORS 0.5 //le temps pour passer d'un étage à un autre
+#define NB_FLOOR 25 //Nombre d'étages
+#define NB_MAX_PERSONS 3 //Nombre max de personnes (résidents + visiteurs)
+#define TIME_BETWEEN_FLOORS 1 //le temps pour passer d'un étage à un autre
 
 
 /* Définition des couleurs utilisées */
